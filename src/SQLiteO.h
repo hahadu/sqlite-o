@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string>
 #include <map>
-class SQLite
+class SQLiteO
 {
     /*定义私有属性*/
     private:
@@ -26,9 +26,25 @@ class SQLite
     protected:
         /* 数据库对象 */
 		sqlite3* db = NULL;
+        /// <summary>
+        /// 检查传入map数据是否为空
+        /// </summary>
+        /// <param name="mapData"></param>
+        /// <returns></returns>
+        bool is_empty_map_datas(std::map<const char*, const char* > mapData) {
+            if (mapData.empty()) {
+                std::cout << "这啥也没有啊，搞我呢？" << std::endl;
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
 
     /*定公共有属性*/
 	public: 
+        /* 等号  */
+        const char* EQUAL_SIGN_CHARACTER = "=";
         /* 空格  */
         const char* SPACE_CHARACTER = " ";
         /* 目录分隔符 : / */
@@ -36,7 +52,7 @@ class SQLite
         /* 目录分隔符 : / */
         const char* DS = "/";
         /* 单引号:' */
-        const char* SINGLE_QUOTES_CHARACTER = "'";
+        const char* SINGLE_QUOTES_CHARACTER = "\'";
         /* 双引号 : " */
         const char* DOUBLE_QUOTES_CHARACTER = "\"";
         /// <summary>
@@ -45,31 +61,26 @@ class SQLite
         /// <returns>（</returns>
         const char* PARENTHESES_CHARACTER = "(";
         /* 构造函数 */
-        SQLite(const char* database_name=NULL) {
+        SQLiteO(const char* database_name=NULL) {
             if (NULL != database_name) {
                 this->open(database_name);
             }
         }
         /* 析构函数*/
-        ~SQLite() {
+        ~SQLiteO() {
             this->close();
             
         }
         /* 设置表名 */
-        SQLite* table(const char* table_name);
+        SQLiteO* table(const char* table_name);
 		//void SQLiteCreateDeviceListTable(void);
-        SQLite* open(const char* db_name);
+        SQLiteO* open(const char* db_name);
         /*
         * 创建数据表
         */
-        int create_table(const char* create_columns);
+        int create_table(std::map<const char*, const char*>  create_columns);
         /* 检查数据表是否存在 */
         bool is_table();
-        /// <summary>
-        /// 更新
-        /// </summary>
-        /// <returns>int</returns>
-        int update();
         /// <summary>
         /// select 回调
         /// </summary>
@@ -113,6 +124,21 @@ class SQLite
         /// <param name="columns">需要查询的列，默认*</param>
         /// <returns>int</returns>
         int select(const char* columns = "*");
+        /// <summary>
+        /// 更新
+        /// </summary>
+        /// <returns>int</returns>
+        int update(std::map<const char*, const char* > datas);
+        /// <summary>
+        /// 删除数据
+        /// </summary>
+        /// <returns></returns>
+        int delete_data();
+        /// <summary>
+        /// 删除数据表
+        /// </summary>
+        /// <returns></returns>
+        int delete_table();
         /*
         * 查询单列结果值
         */
@@ -125,7 +151,7 @@ class SQLite
         * const char* value = NULL 查询值
         * const char* _boolean 
         */
-        SQLite* where(const char* column,const char* op = NULL,const char* value = NULL , const char* _boolean = "AND");
+        SQLiteO* where(const char* column,const char* op = NULL,const char* value = NULL , const char* _boolean = "AND");
         /* 关闭数据库链接 */
         void close() {
             sqlite3_close(db);
