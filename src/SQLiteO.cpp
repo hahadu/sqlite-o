@@ -174,6 +174,7 @@ Json::Value SQLiteO::select(const char* columns) {
     selected += base_where_groupby_clause_string;
     selected += base_where_orderby_clause_string;
     selected += base_where_limit_clause_string;
+    selected += base_where_join_clause_string;
     selected += "; ";
     char* sql = new char[strlen(selected.c_str()) + 1];
     strcpy_s(sql, strlen(selected.c_str()) + 1, selected.c_str());
@@ -187,7 +188,6 @@ Json::Value SQLiteO::select(const char* columns) {
     }
     return false;
 }
-
 
 SQLiteO* SQLiteO::where(const char* column, const char* op, const char* value, const char* _boolean)
 {
@@ -242,6 +242,28 @@ SQLiteO* SQLiteO::groupBy(const char* column) {
 SQLiteO* SQLiteO::distinct() {
     base_where_distinct_clause_string = "DISTINCT";
     base_where_distinct_clause_string += SPACE_CHARACTER;
+    return this;
+}
+SQLiteO* SQLiteO::join(const char* table, const char* first, const char* op, const char* second, const char* type) {
+    if (second == NULL) {
+        second = op;
+        op = "=";
+    }
+    base_where_join_clause_string += SPACE_CHARACTER;
+    base_where_join_clause_string += type;
+    base_where_join_clause_string += SPACE_CHARACTER;
+    base_where_join_clause_string += "JOIN";
+    base_where_join_clause_string += SPACE_CHARACTER;
+    base_where_join_clause_string += table;
+    base_where_join_clause_string += SPACE_CHARACTER;
+    base_where_join_clause_string += "ON";
+    base_where_join_clause_string += SPACE_CHARACTER;
+    base_where_join_clause_string += first;
+    base_where_join_clause_string += SPACE_CHARACTER;
+    base_where_join_clause_string += op;
+    base_where_join_clause_string += SPACE_CHARACTER;
+    base_where_join_clause_string += second;
+    base_where_join_clause_string += SPACE_CHARACTER;
     return this;
 }
 int SQLiteO::count() {

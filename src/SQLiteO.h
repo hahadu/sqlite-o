@@ -1,12 +1,13 @@
 #pragma once
-
+#ifndef SQLITEO_H
+#define SQLITEO_H  extern "C" _declspec(dllimport) 
 #include <sqlite3.h>
 #include <stdio.h>
 #include <string>
 #include <map>
 #include <array>
 #include "json/json.h"
-
+#endif //SQLITEO_H
 
 class SQLiteO
 {
@@ -26,6 +27,7 @@ class SQLiteO
         std::string base_where_groupby_clause_string = "";
         /* 与 SELECT 语句一起使用，来消除所有重复的记录，并只获取唯一一次记录 */
         std::string base_where_distinct_clause_string = "";
+        std::string base_where_join_clause_string = "";
 
         /* 检查tablename */
         bool is_tablename() {
@@ -196,6 +198,7 @@ class SQLiteO
         /// <param name="order">排序规则 默认DESC</param>
         /// <returns></returns>
         SQLiteO* distinct();
+        SQLiteO* join(const char* table,  const char* first, const char* op = NULL, const char* second = NULL, const char* type = "INNER");
         int count();
         /// <summary>
         /// 更新
