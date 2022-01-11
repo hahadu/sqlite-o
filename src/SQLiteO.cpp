@@ -2,6 +2,7 @@
 #include "SQLiteO.h"
 #include <stdio.h>
 #include <map>
+#include "json/json.h"
 
 SQLiteO* SQLiteO::table(const char* set_table_name) {
     table_name = set_table_name;
@@ -9,15 +10,19 @@ SQLiteO* SQLiteO::table(const char* set_table_name) {
 }
 
 SQLiteO* SQLiteO::open(const char* db_name) {
+    
     sqlite3_open("data.db", &db);
     return this;
-
 }
 
 int SQLiteO::create_table(std::map<const char*, const char*> create_columns) {
-
-    if (create_columns.empty()) {
-        std::cout << "这啥也没有啊，搞我呢？" << std::endl;
+    //判断表是否存在
+    if (this->is_table()) {
+        Json::Value tableList = this->where("name", this->table_name)->table("sqlite_master")->select();
+        //Json::Value info = tableList[0];
+        return true;
+    }
+    if (is_empty_map_datas(create_columns)) {
         return false;
     }
     std::map<const char*, const char*>::iterator   iter;
@@ -33,7 +38,7 @@ int SQLiteO::create_table(std::map<const char*, const char*> create_columns) {
     //移除最后一个","
     columns_string.pop_back();
 
-    std::string created = "CREATE TABLE ";
+    std::string created = "CREATE TABLE IF NOT EXISTS ";
     created += table_name;
     created += " ( ";
     created += columns_string;
@@ -47,8 +52,8 @@ int SQLiteO::create_table(std::map<const char*, const char*> create_columns) {
     return result;
 
 }
-/* select 回调 */
-int SQLiteO::selectCallback(void* data, int argc, char** argv, char** azColName) {
+
+int SQLiteO::createCallback(void* data, int argc, char** argv, char** azColName) {
     int i;
     fprintf(stderr, "%s: ", (const char*)data);
     for (i = 0; i < argc; i++) {
@@ -57,7 +62,8 @@ int SQLiteO::selectCallback(void* data, int argc, char** argv, char** azColName)
     printf("\n");
     return 0;
 }
-int SQLiteO::createCallback(void* data, int argc, char** argv, char** azColName) {
+
+int SQLiteO::updateCallback(void* data, int argc, char** argv, char** azColName) {
     int i;
     fprintf(stderr, "%s: ", (const char*)data);
     for (i = 0; i < argc; i++) {
@@ -72,23 +78,30 @@ int SQLiteO::insertCallback(void* NotUsed, int argc, char** argv, char** azColNa
     for (i = 0; i < argc; i++) {
         printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
     }
+    
+    printf("\n");
+    return 0;
+}
+int SQLiteO::deleteCallback(void* data, int argc, char** argv, char** azColName) {
+    int i;
+    fprintf(stderr, "%s: ", (const char*)data);
+    for (i = 0; i < argc; i++) {
+        printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+    }
     printf("\n");
     return 0;
 }
 
-
 int SQLiteO::insert(std::map<const char*, const char* > columns) {
     if (!this->is_tablename()) {
-        std::cout << "No query form is specified" << std::endl;
         return 0;
     }
-
+    
     /// <summary>
     /// 判断不为空
     /// </summary>
     /// <param name="columns"></param>
-    if (columns.empty()) {
-        std::cout << "这啥也没有啊，搞我呢？" << std::endl;
+    if (is_empty_map_datas(columns)) {
         return false;
     }
     std::map<const char*, const char*>::iterator   iter;
@@ -122,31 +135,57 @@ int SQLiteO::insert(std::map<const char*, const char* > columns) {
     insert += " ); ";
     char* sql = new char[strlen(insert.c_str()) + 1];
     strcpy_s(sql, strlen(insert.c_str()) + 1, insert.c_str());
+    //sqlite3_stmt* stmt;
+    typedef struct sqlite3_stmt sqlite3_stmt;
 
     int result = sqlite3_exec(db, sql, insertCallback, (void*)data, &zErrMsg);
     //int result = 0;
     return result;
 }
-int SQLiteO::select(const char* columns) {
+Json::Value select_result_data;
+
+/* select 回调 */
+int SQLiteO::selectCallback(void* data, int argc, char** argv, char** azColName) {
+    int i;
+    Json::Value info;
+    for (i = 0; i < argc; i++) {
+        info[azColName[i]] = argv[i] ? argv[i] : "NULL";
+    }
+    select_result_data.append(info);
+    return 0;
+}
+Json::Value SQLiteO::select(const char* columns) {
     if (!this->is_tablename()) {
-        std::cout << "No query form is specified" << std::endl;
-        return 0;
+
+        return false;
     }
     
-    std::string selected = "SELECT ";
+    std::string selected = "SELECT";
+    selected += SPACE_CHARACTER;
+    selected += base_where_distinct_clause_string;
+    selected += SPACE_CHARACTER;
     selected += columns;
-    selected += " FROM ";
+    selected += SPACE_CHARACTER;
+    selected += "FROM";
+    selected += SPACE_CHARACTER;
     selected += table_name;
     selected += SPACE_CHARACTER;
     selected += base_where_clause_string;
+    selected += base_where_groupby_clause_string;
+    selected += base_where_orderby_clause_string;
+    selected += base_where_limit_clause_string;
     selected += "; ";
     char* sql = new char[strlen(selected.c_str()) + 1];
     strcpy_s(sql, strlen(selected.c_str()) + 1, selected.c_str());
     //子查询语句用完应该及时清理回收
     base_where_clause_string.clear();
-   // std::cout << sql << std::endl;
-    int result = sqlite3_exec(db, sql, selectCallback, (void*)data, &zErrMsg);
-    return result;
+    const char* result_data = "";
+    int result = sqlite3_exec(db, sql, selectCallback, (void*)result_data, &zErrMsg);
+    std::cout << sql << std::endl;
+    if (result == SQLITE_OK) {
+        return select_result_data;
+    }
+    return false;
 }
 
 
@@ -176,24 +215,60 @@ SQLiteO* SQLiteO::where(const char* column, const char* op, const char* value, c
     base_where_clause_string += SPACE_CHARACTER;
     return this;
 }
+SQLiteO* SQLiteO::limit(int limit) {
+    base_where_limit_clause_string = "LIMIT";
+    base_where_limit_clause_string += SPACE_CHARACTER;
+    base_where_limit_clause_string += std::to_string(limit);
+    base_where_limit_clause_string += SPACE_CHARACTER;
+    return this;
+}
+SQLiteO* SQLiteO::orderBy(const char* column,const char* order) {
+    base_where_orderby_clause_string = "ORDER BY";
+    base_where_orderby_clause_string += SPACE_CHARACTER;
+    base_where_orderby_clause_string += column;
+    base_where_orderby_clause_string += SPACE_CHARACTER;
+    base_where_orderby_clause_string += order;
+    base_where_orderby_clause_string += SPACE_CHARACTER;
+    return this;
+}
+SQLiteO* SQLiteO::groupBy(const char* column) {
+    base_where_groupby_clause_string = "GROUP BY";
+    base_where_groupby_clause_string += SPACE_CHARACTER;
+    base_where_groupby_clause_string += column;
+    base_where_groupby_clause_string += SPACE_CHARACTER;
+    return this;
 
+}
+SQLiteO* SQLiteO::distinct() {
+    base_where_distinct_clause_string = "DISTINCT";
+    base_where_distinct_clause_string += SPACE_CHARACTER;
+    return this;
+}
+int SQLiteO::count() {
+    Json::Value data = this->select("count(*)");
+    const char* countStr = data[0]["count(*)"].asCString();
+    return atoi(countStr);
+}
 bool SQLiteO::is_table()
 {
+    Json::Value data = this->where("name", this->table_name)->table("sqlite_master")->count();
+    std::cout << data << std::endl;
 
+    if (data.size() > 0) {
+        return true;
+    }
     return false;
 }
 
 int SQLiteO::update(std::map<const char*, const char* > datas) {
     if (!this->is_tablename()) {
-        std::cout << "No query form is specified" << std::endl;
         return 0;
     }
-    // "UPDATE device_list SET device_serial_num = 'ARMJ9X1529W01916' WHERE ID = 1;
-    if (datas.empty()) {
-        std::cout << "这啥也没有啊，搞我呢？" << std::endl;
+    if (is_empty_map_datas(datas)) {
         return false;
     }
-    std::map<const char*, const char*>::iterator   iter;
+
+    std::map<const char*, const char*>::iterator  iter;
     std::string update_string = "";
 
     for (iter = datas.begin(); iter != datas.end(); iter++) {
@@ -209,7 +284,7 @@ int SQLiteO::update(std::map<const char*, const char* > datas) {
 
     //移除最后一个","
     update_string.pop_back();
-    std::cout << update_string << std::endl;
+
     std::string update = "UPDATE ";
     update += table_name;
     update += SPACE_CHARACTER;
@@ -219,10 +294,8 @@ int SQLiteO::update(std::map<const char*, const char* > datas) {
     update += SPACE_CHARACTER;
     update += base_where_clause_string;
 
-    std::cout << update << std::endl;
     char* sql = new char[strlen(update.c_str()) + 1];
     strcpy_s(sql, strlen(update.c_str()) + 1, update.c_str());
-
     int result = sqlite3_exec(db, (const char*)sql, createCallback, (void*)data, &zErrMsg);
     delete sql;
     update.clear();
@@ -231,8 +304,37 @@ int SQLiteO::update(std::map<const char*, const char* > datas) {
 }
 
 int SQLiteO::delete_data() {
-    return 0;
+    if (!this->is_tablename()) {
+        return 0;
+    }
+
+    std::string delete_data = "DELETE FROM";
+    delete_data += SPACE_CHARACTER;
+    delete_data += table_name;
+    delete_data += SPACE_CHARACTER;
+    delete_data += base_where_clause_string;
+    delete_data += SEMICOLON_CHARACTER;
+    char* sql = new char[strlen(delete_data.c_str()) + 1];
+    strcpy_s(sql, strlen(delete_data.c_str()) + 1, delete_data.c_str());
+    delete_data.clear();
+
+    int result = sqlite3_exec(db, sql, deleteCallback, (void*)data, &zErrMsg);
+    return result;
 }
-int SQLiteO::delete_table() {
-    return 0;
+int SQLiteO::delete_table(const char* table_name) {
+    if ("" == table_name) {
+        if (!this->is_tablename()) {
+            return 0;
+        }
+        table_name = this->table_name;
+    }
+
+    std::string delete_table = "DROP TABLE";
+    delete_table += SPACE_CHARACTER;
+    delete_table += table_name;
+    char* sql = new char[strlen(delete_table.c_str()) + 1];
+    strcpy_s(sql, strlen(delete_table.c_str()) + 1, delete_table.c_str());
+    delete_table.clear();
+    int result = sqlite3_exec(db, sql, deleteCallback, (void*)data, &zErrMsg);
+    return result;
 }

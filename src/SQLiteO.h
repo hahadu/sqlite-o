@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <string>
 #include <map>
+#include <array>
+#include "json/json.h"
+
+
 class SQLiteO
 {
     /*定义私有属性*/
@@ -13,14 +17,38 @@ class SQLiteO
         
         /* result data*/
         const char* data = "Callback function called";
-
         /* 表名 */
         const char* table_name;
         std::string base_where_clause_string = "";
+        std::string base_where_limit_clause_string = "";
+        std::string base_where_orderby_clause_string = "";
+        /* GROUP BY 子句放在 WHERE 子句之后，放在 ORDER BY 子句之前 */
+        std::string base_where_groupby_clause_string = "";
+        /* 与 SELECT 语句一起使用，来消除所有重复的记录，并只获取唯一一次记录 */
+        std::string base_where_distinct_clause_string = "";
+
         /* 检查tablename */
         bool is_tablename() {
-            return NULL != table_name;
+            typedef int (*cmpfunc)(void*, void*);
+
+            const char* nums[4] = { ""," ","\0",NULL};
+            int i, thisindex = -1;
+            int size = sizeof(nums) / sizeof(nums[0]);
+            for (i = 0; i < 10; i++) {
+                if (nums[i] == this->table_name) {
+                    thisindex = i; //返回元素所在位置
+                    break;
+                }
+            }
+            if (thisindex < 0) {
+                return true;
+            }
+            else {
+                std::cout << "No query form is specified 亲，叫个表吧，求你了！" << std::endl;
+                return false;
+            }
         }
+
 
     /*定义私有属性*/
     protected:
@@ -33,7 +61,7 @@ class SQLiteO
         /// <returns></returns>
         bool is_empty_map_datas(std::map<const char*, const char* > mapData) {
             if (mapData.empty()) {
-                std::cout << "这啥也没有啊，搞我呢？" << std::endl;
+                std::cout << "map is empty 这啥也没有啊，搞我呢？" << std::endl;
                 return true;
             }
             else {
@@ -53,8 +81,8 @@ class SQLiteO
         const char* DS = "/";
         /* 单引号:' */
         const char* SINGLE_QUOTES_CHARACTER = "\'";
-        /* 双引号 : " */
-        const char* DOUBLE_QUOTES_CHARACTER = "\"";
+        /* 分号 : ; */
+        const char* SEMICOLON_CHARACTER = ";";
         /// <summary>
         /// 括号
         /// </summary>
@@ -110,7 +138,24 @@ class SQLiteO
         /// <param name="azColName"></param>
         /// <returns>static int</returns>
         static int insertCallback(void* NotUsed, int argc, char** argv, char** azColName);
-
+        /// <summary>
+        /// update 回调
+        /// </summary>
+        /// <param name="NotUsed"></param>
+        /// <param name="argc"></param>
+        /// <param name="argv"></param>
+        /// <param name="azColName"></param>
+        /// <returns>static int</returns>
+        static int updateCallback(void* data, int argc, char** argv, char** azColName);
+        /// <summary>
+        /// delete 回调
+        /// </summary>
+        /// <param name="NotUsed"></param>
+        /// <param name="argc"></param>
+        /// <param name="argv"></param>
+        /// <param name="azColName"></param>
+        /// <returns>static int</returns>
+        static int deleteCallback(void* data, int argc, char** argv, char** azColName);
         /// <summary>
         /// inster操作
         /// </summary>
@@ -123,7 +168,35 @@ class SQLiteO
         /// </summary>
         /// <param name="columns">需要查询的列，默认*</param>
         /// <returns>int</returns>
-        int select(const char* columns = "*");
+        Json::Value select(const char* columns = "*");
+        /// <summary>
+        /// 查询数量
+        /// </summary>
+        /// <param name="limit">数量</param>
+        /// <returns></returns>
+        SQLiteO* limit(int limit);
+        /// <summary>
+        /// 排序
+        /// </summary>
+        /// <param name="column">列</param>
+        /// <param name="order">排序规则 默认DESC</param>
+        /// <returns></returns>
+        SQLiteO* orderBy(const char* column,const char* order="DESC");
+        /// <summary>
+        /// groupBy 用于与 SELECT 语句一起使用，来对相同的数据进行分组
+        /// </summary>
+        /// <param name="column">列</param>
+        /// <param name="order">排序规则 默认DESC</param>
+        /// <returns></returns>
+        SQLiteO* groupBy(const char* column);
+        /// <summary>
+        /// groupBy 用于与 SELECT 语句一起使用，来对相同的数据进行分组
+        /// </summary>
+        /// <param name="column">列</param>
+        /// <param name="order">排序规则 默认DESC</param>
+        /// <returns></returns>
+        SQLiteO* distinct();
+        int count();
         /// <summary>
         /// 更新
         /// </summary>
@@ -138,7 +211,7 @@ class SQLiteO
         /// 删除数据表
         /// </summary>
         /// <returns></returns>
-        int delete_table();
+        int delete_table(const char* table_name=NULL);
         /*
         * 查询单列结果值
         */
