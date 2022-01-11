@@ -13,6 +13,7 @@ class SQLiteO
 {
     /*定义私有属性*/
     private:
+
         /* err_message*/
         char* zErrMsg = 0;
         
@@ -28,7 +29,25 @@ class SQLiteO
         /* 与 SELECT 语句一起使用，来消除所有重复的记录，并只获取唯一一次记录 */
         std::string base_where_distinct_clause_string = "";
         std::string base_where_join_clause_string = "";
+        bool in_array(const char* needle,const char *haystack[],int char_size) {
+            int i, thisindex = -1;
 
+            //int size = sizeof(haystack) / sizeof(haystack[0]);
+            //std::cout << char_size << std::endl;
+            for (i = 0; i < char_size; i++) {
+                
+                if (strcmp(needle, haystack[i]) == 0) {
+                    thisindex = i; //返回元素所在位置
+                    break;
+                }
+            }
+            if (thisindex >= 0) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
         /* 检查tablename */
         bool is_tablename() {
             typedef int (*cmpfunc)(void*, void*);
@@ -70,6 +89,12 @@ class SQLiteO
                 return false;
             }
         }
+
+        const char* operators[24] = {
+            "==","=","!=","<>",">","<",">=","<=","!<","!>",
+            "AND","BETWEEN","EXISTS","IN","NOT IN","LIKE",
+            "GLOB","NOT","OR","IS NULL","IS","IS NOT","||","UNIQUE"
+        };
 
     /*定公共有属性*/
 	public: 

@@ -2,8 +2,9 @@
 #include "SQLiteO.h"
 #include <stdio.h>
 #include <map>
+#include <string>
 #include "json/json.h"
-
+#include <algorithm>
 SQLiteO* SQLiteO::table(const char* set_table_name) {
     table_name = set_table_name;
     return this;
@@ -182,20 +183,30 @@ Json::Value SQLiteO::select(const char* columns) {
     base_where_clause_string.clear();
     const char* result_data = "";
     int result = sqlite3_exec(db, sql, selectCallback, (void*)result_data, &zErrMsg);
-    std::cout << sql << std::endl;
+    //std::cout << sql << std::endl;
     if (result == SQLITE_OK) {
         return select_result_data;
     }
     return false;
 }
-
 SQLiteO* SQLiteO::where(const char* column, const char* op, const char* value, const char* _boolean)
 {
     //where方法应该只创建一个用于查询的where子语句
-    //std::
+    std::string opString = op;
+    std::transform(opString.begin(), opString.end(), opString.begin(), ::towupper);
     if (NULL == value) {
-        value = op;
-        op = "=";
+        if (!this->in_array(opString.c_str(), this->operators, sizeof(this->operators) / sizeof(this->operators[0]))) {
+            value = op;
+            op = "=";
+        }
+        else {
+            char errorString[] = "query column requires a valid value 你找什么啊亲！";
+            extern int errno;
+            int errnum = errno;
+            fprintf(stderr, errorString);
+            exit(-1);
+            return this;
+        }
     }
     if (base_where_clause_string.length() > 0) {
         base_where_clause_string += _boolean;
@@ -207,7 +218,7 @@ SQLiteO* SQLiteO::where(const char* column, const char* op, const char* value, c
     }
     base_where_clause_string += column;
     base_where_clause_string += SPACE_CHARACTER;
-    base_where_clause_string += op;
+    base_where_clause_string += opString;
     base_where_clause_string += SPACE_CHARACTER;
     base_where_clause_string += SINGLE_QUOTES_CHARACTER;
     base_where_clause_string += value;
