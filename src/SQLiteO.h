@@ -21,6 +21,8 @@ class SQLiteO
         const char* data = "Callback function called";
         /* 表名 */
         const char* table_name;
+        //std::string begin_transaction_clause_string = "";
+        //std::string end_transaction_clause_string = "";
         std::string base_where_clause_string = "";
         std::string base_where_limit_clause_string = "";
         std::string base_where_orderby_clause_string = "";
@@ -69,7 +71,12 @@ class SQLiteO
                 return false;
             }
         }
-
+        int sql_exec(const char* sql,                           /* SQL to be evaluated */
+            int (*callback)(void*, int, char**, char**),  /* Callback function */
+            void* _data,                                    /* 1st argument to callback */
+            char** errmsg){
+            return sqlite3_exec(this->db,sql,callback,_data,errmsg);
+        }
 
     /*定义私有属性*/
     protected:
@@ -110,6 +117,8 @@ class SQLiteO
         const char* SINGLE_QUOTES_CHARACTER = "\'";
         /* 分号 : ; */
         const char* SEMICOLON_CHARACTER = ";";
+        /* 换行 : \n */
+        const char* LINE_BREAK_CHARACTER = "\n";
         /// <summary>
         /// 括号
         /// </summary>
@@ -130,6 +139,7 @@ class SQLiteO
         SQLiteO* table(const char* table_name);
 		//void SQLiteCreateDeviceListTable(void);
         SQLiteO* open(const char* db_name);
+        
         /*
         * 创建数据表
         */
@@ -253,6 +263,24 @@ class SQLiteO
         * const char* _boolean 
         */
         SQLiteO* where(const char* column,const char* op = NULL,const char* value = NULL , const char* _boolean = "AND");
+        /// <summary>
+        /// 开始事务
+        /// </summary>
+        void begin_transaction() {
+            this->sql_exec("BEGIN TRANSACTION;",0,0,0);
+        }
+        /// <summary>
+        /// 结束事务
+        /// </summary>
+        void end_transaction() {
+            this->sql_exec("END TRANSACTION;", 0, 0, 0);
+        }
+        /// <summary>
+        /// 撤销事务
+        /// </summary>
+        void rollback_transaction() {
+            this->sql_exec("ROLLBACK;", 0, 0, 0);
+        }
         /* 关闭数据库链接 */
         void close() {
             sqlite3_close(db);
