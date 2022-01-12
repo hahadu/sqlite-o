@@ -1,3 +1,4 @@
-/.idea
-/.vscode
-/.cmake-build-debug
+.vscode
+cmake-build-debug
+.idea
+.gitignore
