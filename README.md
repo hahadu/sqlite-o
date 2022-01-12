@@ -20,3 +20,11 @@ db->table(DATABASE_DEVICE_LIST_TABLE_NAME)->create_table(std::map<const char*,co
 ```cpp
  db->where("column_name","column_value")->select("*");
 ```
+//orderBy
+```cpp
+ db->where("column_name","column_value")->orderBy("column_name","desc")->select();
+```
+//groupBy
+```cpp
+ db->where("column_name","column_value")->groupBy("column_name")->select();
+```

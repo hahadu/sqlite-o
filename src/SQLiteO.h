@@ -71,12 +71,21 @@ class SQLiteO
                 return false;
             }
         }
-        int sql_exec(const char* sql,                           /* SQL to be evaluated */
+        /// <summary>
+        /// 原生sql查询
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <param name="callback"></param>
+        /// <param name="_data"></param>
+        /// <param name="errmsg"></param>
+        /// <returns></returns>
+        int query(const char* sql,                           /* SQL to be evaluated */
             int (*callback)(void*, int, char**, char**),  /* Callback function */
             void* _data,                                    /* 1st argument to callback */
-            char** errmsg){
-            return sqlite3_exec(this->db,sql,callback,_data,errmsg);
+            char** errmsg) {
+            return sqlite3_exec(this->db, sql, callback, _data, errmsg);
         }
+
 
     /*定义私有属性*/
     protected:
@@ -139,7 +148,7 @@ class SQLiteO
         SQLiteO* table(const char* table_name);
 		//void SQLiteCreateDeviceListTable(void);
         SQLiteO* open(const char* db_name);
-        
+
         /*
         * 创建数据表
         */
@@ -267,19 +276,20 @@ class SQLiteO
         /// 开始事务
         /// </summary>
         void begin_transaction() {
-            this->sql_exec("BEGIN TRANSACTION;",0,0,0);
+            
+            this->query("BEGIN TRANSACTION;",0,0,0);
         }
         /// <summary>
         /// 结束事务
         /// </summary>
         void end_transaction() {
-            this->sql_exec("END TRANSACTION;", 0, 0, 0);
+            this->query("END TRANSACTION;", 0, 0, 0);
         }
         /// <summary>
         /// 撤销事务
         /// </summary>
         void rollback_transaction() {
-            this->sql_exec("ROLLBACK;", 0, 0, 0);
+            this->query("ROLLBACK;", 0, 0, 0);
         }
         /* 关闭数据库链接 */
         void close() {
