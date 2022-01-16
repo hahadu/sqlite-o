@@ -12,10 +12,21 @@ SQLiteO* SQLiteO::table(const char* set_table_name) {
 
 SQLiteO* SQLiteO::open(const char* db_name) {
     
-    sqlite3_open(db_name, &db);
-    return this;
+    //sqlite3_open(db_name, &db);
+    return new SQLiteO(db_name);
 }
-
+int SQLiteO::baseCallback(void* data, int argc, char** argv, char** azColName) {
+    int i;
+    fprintf(stderr, "%s: ", (const char*)data);
+    std::cout << "====" << std::endl;
+    std::cout << argc << std::endl;
+    std::cout << "====" << std::endl;
+    for (i = 0; i < argc; i++) {
+        printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+    }
+    printf("\n");
+    return 0;
+}
 int SQLiteO::create_table(std::map<const char*, const char*> create_columns) {
     //判断表是否存在
     if (this->is_table()) {
@@ -23,6 +34,7 @@ int SQLiteO::create_table(std::map<const char*, const char*> create_columns) {
         //Json::Value info = tableList[0];
         return true;
     }
+    
     if (is_empty_map_datas(create_columns)) {
         return false;
     }
@@ -39,17 +51,15 @@ int SQLiteO::create_table(std::map<const char*, const char*> create_columns) {
     //移除最后一个","
     columns_string.pop_back();
 
-    std::string created = "CREATE TABLE IF NOT EXISTS ";
+    std::string created = "CREATE TABLE ";
     created += table_name;
     created += " ( ";
     created += columns_string;
     created += " ); ";
     char* sql = new char[strlen(created.c_str()) + 1];
     strcpy_s(sql, strlen(created.c_str()) + 1, created.c_str());
-
-    int result = sqlite3_exec(db, (const char*)sql, createCallback, (void*)data, &zErrMsg);
+    int result = sqlite3_exec(db, sql, baseCallback, (void*)data, &zErrMsg);
     delete sql;
-    //int result = 0;
     return result;
 
 }
@@ -279,15 +289,19 @@ SQLiteO* SQLiteO::join(const char* table, const char* first, const char* op, con
 }
 int SQLiteO::count() {
     Json::Value data = this->select("count(*)");
-    const char* countStr = data[0]["count(*)"].asCString();
-    return atoi(countStr);
+    if (data.size() > 0) {
+        const char* countStr = data[0]["count(*)"].asCString();
+        return atoi(countStr);
+    }
+    return 0;
 }
 bool SQLiteO::is_table()
 {
-    Json::Value data = this->where("name", this->table_name)->table("sqlite_master")->count();
-    std::cout << data << std::endl;
+    const char* tablename = this->table_name;
+    int count = this->where("name", this->table_name)->table("sqlite_master")->count();
 
-    if (data.size() > 0) {
+    this->table_name = tablename;
+    if (count > 0) {
         return true;
     }
     return false;

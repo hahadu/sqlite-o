@@ -136,7 +136,8 @@ class SQLiteO
         /* 构造函数 */
         SQLiteO(const char* database_name=NULL) {
             if (NULL != database_name) {
-                this->open(database_name);
+                sqlite3_open(database_name, &db);
+                //this->open(database_name);
             }
         }
         /* 析构函数*/
@@ -147,7 +148,7 @@ class SQLiteO
         /* 设置表名 */
         SQLiteO* table(const char* table_name);
 		//void SQLiteCreateDeviceListTable(void);
-        SQLiteO* open(const char* db_name);
+        static SQLiteO* open(const char* db_name);
 
         /*
         * 创建数据表
@@ -174,6 +175,15 @@ class SQLiteO
         /// <param name="azColName"></param>
         /// <returns>static int</returns>
         static int createCallback(void* data, int argc, char** argv, char** azColName);
+        /// <summary>
+        /// create function callback
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="argc"></param>
+        /// <param name="argv"></param>
+        /// <param name="azColName"></param>
+        /// <returns>static int</returns>
+        static int baseCallback(void* data, int argc, char** argv, char** azColName);
 
         /// <summary>
         /// insert 回调

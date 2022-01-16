@@ -9,8 +9,7 @@ example:
 // connect database
  SQLiteO* db = new SQLiteO(DATABASE_NAME);
 or
- SQLiteO* db = new SQLiteO();
- db->open(DATABASE_NAME);
+ SQLiteO* db = SQLiteO::open(DATABASE_NAME);
 ```
 //create
 ```cpp
