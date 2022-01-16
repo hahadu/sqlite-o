@@ -12,7 +12,7 @@ SQLiteO* SQLiteO::table(const char* set_table_name) {
 
 SQLiteO* SQLiteO::open(const char* db_name) {
     
-    sqlite3_open("data.db", &db);
+    sqlite3_open(db_name, &db);
     return this;
 }
 
